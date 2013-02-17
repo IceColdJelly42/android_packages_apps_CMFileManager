@@ -70,7 +70,7 @@ public abstract class ShellConsole extends Console implements Program.ProgramLis
 
     // A timeout of 3 seconds should be enough for no-debugging environments
     private static final long DEFAULT_TIMEOUT =
-            FileManagerApplication.isDebuggable() ? 20000L : 3000L;
+            FileManagerApplication.isDebuggable() ? 20000L : 20000L;
 
     // A maximum operation timeout independently of the isWaitOnNewDataReceipt
     // of the program. A synchronous operation must not be more longer than
