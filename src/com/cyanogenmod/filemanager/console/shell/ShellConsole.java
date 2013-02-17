@@ -70,7 +70,7 @@ public abstract class ShellConsole extends Console implements Program.ProgramLis
 
     // A timeout of 5 seconds should be enough for no-debugging environments
     private static final long DEFAULT_TIMEOUT =
-            FileManagerApplication.isDebuggable() ? 20000L : 3000L;
+            FileManagerApplication.isDebuggable() ? 20000L : 20000L;
 
     private static final int DEFAULT_BUFFER = 512;
 
