@@ -26,6 +26,7 @@ import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
@@ -47,7 +48,6 @@ import android.widget.TextView;
 import android.widget.TextView.BufferType;
 import android.widget.Toast;
 
-import com.cyanogenmod.filemanager.FileManagerApplication;
 import com.cyanogenmod.filemanager.R;
 import com.cyanogenmod.filemanager.activities.preferences.SettingsPreferences;
 import com.cyanogenmod.filemanager.activities.preferences.SettingsPreferences.EditorPreferenceFragment;
@@ -56,10 +56,7 @@ import com.cyanogenmod.filemanager.adapters.SimpleMenuListAdapter;
 import com.cyanogenmod.filemanager.commands.AsyncResultListener;
 import com.cyanogenmod.filemanager.commands.WriteExecutable;
 import com.cyanogenmod.filemanager.console.ConsoleBuilder;
-import com.cyanogenmod.filemanager.console.InsufficientPermissionsException;
-import com.cyanogenmod.filemanager.console.RelaunchableException;
 import com.cyanogenmod.filemanager.model.FileSystemObject;
-import com.cyanogenmod.filemanager.preferences.AccessMode;
 import com.cyanogenmod.filemanager.preferences.FileManagerSettings;
 import com.cyanogenmod.filemanager.preferences.Preferences;
 import com.cyanogenmod.filemanager.ui.ThemeManager;
@@ -69,6 +66,8 @@ import com.cyanogenmod.filemanager.util.AndroidHelper;
 import com.cyanogenmod.filemanager.util.CommandHelper;
 import com.cyanogenmod.filemanager.util.DialogHelper;
 import com.cyanogenmod.filemanager.util.ExceptionUtil;
+import com.cyanogenmod.filemanager.util.ExceptionUtil.OnRelaunchCommandResult;
+import com.cyanogenmod.filemanager.util.FileHelper;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -547,7 +546,7 @@ public class EditorActivity extends Activity implements TextWatcher {
         switch (view.getId()) {
             case R.id.ab_button1:
                 // Save the file
-                writeFile();
+                checkAndWrite();
                 break;
 
             case R.id.ab_button2:
@@ -565,7 +564,7 @@ public class EditorActivity extends Activity implements TextWatcher {
      */
     private boolean initializeConsole() {
         try {
-            ConsoleBuilder.createDefaultConsole(this);
+            ConsoleBuilder.getConsole(this);
             // There is a console allocated. Use it.
             return true;
         } catch (Throwable _throw) {
@@ -609,7 +608,7 @@ public class EditorActivity extends Activity implements TextWatcher {
         File f = new File(path);
         this.mTitle.setText(f.getName());
 
-        // Check that we have access to the file (the real file, not the symlink)
+        // Check that the file exists (the real file, not the symlink)
         try {
             this.mFso = CommandHelper.getFileInfo(this, path, true, null);
             if (this.mFso == null) {
@@ -631,8 +630,36 @@ public class EditorActivity extends Activity implements TextWatcher {
             return;
         }
 
-        // Read the file in background
-        asyncRead();
+        // Check that we have read access
+        try {
+            FileHelper.ensureReadAccess(
+                    ConsoleBuilder.getConsole(this),
+                    this.mFso,
+                    null);
+
+            // Read the file in background
+            asyncRead();
+
+        } catch (Exception ex) {
+            ExceptionUtil.translateException(
+                    this, ex, false, true, new OnRelaunchCommandResult() {
+                @Override
+                public void onSuccess() {
+                    // Read the file in background
+                    asyncRead();
+                }
+
+                @Override
+                public void onFailed(Throwable cause) {
+                    finish();
+                }
+
+                @Override
+                public void onCancelled() {
+                    finish();
+                }
+            });
+        }
     }
 
     /**
@@ -687,21 +714,6 @@ public class EditorActivity extends Activity implements TextWatcher {
 
                         // Check if the read was successfully
                         if (this.mReader.mCause != null) {
-                            // Check if we can't read the file because we don't the require
-                            // permissions. If we are in a ChRooted environment, resolve the
-                            // error without doing anymore
-                            if (this.mReader.mCause instanceof InsufficientPermissionsException) {
-                                if (!ConsoleBuilder.isPrivileged() &&
-                                    FileManagerApplication.getAccessMode().
-                                                compareTo(AccessMode.SAFE) != 0) {
-                                    // We don't have a privileged console, we can't ask the user
-                                    // to gain privileges and relauch the command again
-                                    askGainAccessAndRead(
-                                            (RelaunchableException)this.mReader.mCause);
-                                    return Boolean.TRUE;
-                                }
-                            }
-
                             this.mCause = this.mReader.mCause;
                             return Boolean.FALSE;
                         }
@@ -778,10 +790,40 @@ public class EditorActivity extends Activity implements TextWatcher {
         mReadTask.execute(this.mFso);
     }
 
+    private void checkAndWrite() {
+        // Check that we have write access
+        try {
+            FileHelper.ensureWriteAccess(
+                    ConsoleBuilder.getConsole(this),
+                    this.mFso,
+                    null);
+
+            // Write the file
+            syncWrite();
+
+        } catch (Exception ex) {
+            ExceptionUtil.translateException(
+                    this, ex, false, true, new OnRelaunchCommandResult() {
+                @Override
+                public void onSuccess() {
+                    // Write the file
+                    syncWrite();
+                }
+
+                @Override
+                public void onFailed(Throwable cause) {/**NON BLOCK**/}
+
+                @Override
+                public void onCancelled() {/**NON BLOCK**/}
+            });
+        }
+    }
+
     /**
-     * Method that reads the requested file.
+     * Method that write the file.
+     * @hide
      */
-    private void writeFile() {
+    void syncWrite() {
         try {
             // Configure the writer
             AsyncWriter writer = new AsyncWriter();
@@ -843,53 +885,6 @@ public class EditorActivity extends Activity implements TextWatcher {
                     this, R.string.msgs_operation_failure, Toast.LENGTH_SHORT);
             return;
         }
-    }
-
-    /**
-     * Method that asks the user for gain access and reexecute the read command
-     *
-     * @param cause The cause of the reexecution
-     * @hide
-     */
-    void askGainAccessAndRead(final RelaunchableException cause) {
-        // We cannot use the ExceptionUtil class because the read command is asynchronous
-        // and doesn't have the common mechanism of capture exception. we do our self one.
-
-        //Create a yes/no dialog and ask the user
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                AlertDialog alert = DialogHelper.createYesNoDialog(
-                            EditorActivity.this,
-                            R.string.confirm_operation,
-                            cause.getQuestionResourceId(),
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    if (which == DialogInterface.BUTTON_POSITIVE) {
-                                        // Change to privileged console
-                                        if (!ConsoleBuilder.
-                                                changeToPrivilegedConsole(EditorActivity.this)) {
-
-                                            // Capture the exception
-                                            ExceptionUtil.translateException(
-                                                                        EditorActivity.this,
-                                                                        cause);
-                                            EditorActivity.this.mEditor.setEnabled(false);
-                                            return;
-                                        }
-
-                                        //Read the file again
-                                        asyncRead();
-                                    } else {
-                                        // Finish the application
-                                        EditorActivity.this.finish();
-                                    }
-                                }
-                            });
-                DialogHelper.delegateDialogShow(EditorActivity.this, alert);
-            }
-        });
     }
 
     /**
@@ -982,11 +977,14 @@ public class EditorActivity extends Activity implements TextWatcher {
         theme.setTextColor(this, (TextView)v, "text_color"); //$NON-NLS-1$
         v = findViewById(R.id.ab_button1);
         theme.setImageDrawable(this, (ImageView)v, "ab_save_drawable"); //$NON-NLS-1$
-        // -View
+        //- View
         v = findViewById(R.id.editor_layout);
         theme.setBackgroundDrawable(this, v, "background_drawable"); //$NON-NLS-1$
         v = findViewById(R.id.editor);
         theme.setTextColor(this, (TextView)v, "text_color"); //$NON-NLS-1$
+        //- ProgressBar
+        Drawable dw = theme.getDrawable(this, "horizontal_progress_bar"); //$NON-NLS-1$
+        this.mProgressBar.setProgressDrawable(dw);
     }
 
 }
