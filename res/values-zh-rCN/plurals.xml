@@ -14,22 +14,19 @@
      limitations under the License.
  -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-  <!-- Fso Properties Dialog * Folders -->
   <plurals name="fso_properties_dialog_folders">
-    <item quantity="zero">0 folders</item>
-    <item quantity="one">1 folder</item>
-    <item quantity="other"><xliff:g id="folders">%1$d</xliff:g> folders</item>
+    <item quantity="zero">0 个文件夹</item>
+    <item quantity="one">1 个文件夹</item>
+    <item quantity="other"><xliff:g id="folders">%1$d</xliff:g> 个文件夹</item>
   </plurals>
-  <!-- Fso Properties Dialog * Files -->
   <plurals name="fso_properties_dialog_files">
-    <item quantity="zero">0 files</item>
-    <item quantity="one">1 files</item>
-    <item quantity="other"><xliff:g id="files">%1$d</xliff:g> files</item>
+    <item quantity="zero">0 个文件</item>
+    <item quantity="one">1 个文件</item>
+    <item quantity="other"><xliff:g id="files">%1$d</xliff:g> 个文件</item>
   </plurals>
-  <!-- Search * Search found items -->
   <plurals name="search_found_items">
-    <item quantity="zero">No items found</item>
-    <item quantity="one">1 item found</item>
-    <item quantity="other"><xliff:g id="count">%d</xliff:g> items found</item>
+    <item quantity="zero">未找到任何结果</item>
+    <item quantity="one">找到了 1 项</item>
+    <item quantity="other">找到了 <xliff:g id="count">%d</xliff:g> 项</item>
   </plurals>
 </resources>

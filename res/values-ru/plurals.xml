@@ -16,20 +16,20 @@
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
   <!-- Fso Properties Dialog * Folders -->
   <plurals name="fso_properties_dialog_folders">
-    <item quantity="zero">0 folders</item>
-    <item quantity="one">1 folder</item>
-    <item quantity="other"><xliff:g id="folders">%1$d</xliff:g> folders</item>
+    <item quantity="zero">0 папок</item>
+    <item quantity="one">1 папка</item>
+    <item quantity="other"><xliff:g id="folders">%1$d</xliff:g> папки(-ок,-а)</item>
   </plurals>
   <!-- Fso Properties Dialog * Files -->
   <plurals name="fso_properties_dialog_files">
-    <item quantity="zero">0 files</item>
-    <item quantity="one">1 files</item>
-    <item quantity="other"><xliff:g id="files">%1$d</xliff:g> files</item>
+    <item quantity="zero">0 файлов</item>
+    <item quantity="one">1 файл</item>
+    <item quantity="other"><xliff:g id="files">%1$d</xliff:g> файл(-ов,-а)</item>
   </plurals>
   <!-- Search * Search found items -->
   <plurals name="search_found_items">
-    <item quantity="zero">No items found</item>
-    <item quantity="one">1 item found</item>
-    <item quantity="other"><xliff:g id="count">%d</xliff:g> items found</item>
+    <item quantity="zero">Ничего не найдено</item>
+    <item quantity="one">Найдено 1 значение</item>
+    <item quantity="other">Найдено <xliff:g id="count">%d</xliff:g> значения(-й)</item>
   </plurals>
 </resources>
